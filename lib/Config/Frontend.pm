@@ -3,7 +3,7 @@ package Config::Frontend;
 use 5.006;
 use strict;
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 sub new {
   my $class=shift;
@@ -19,6 +19,10 @@ sub new {
 return $self;
 }
 
+#####################################################
+# Cache
+#####################################################
+
 sub cache {
   my ($self,$cache_on)=@_;
   $self->{"cache_items"}=$cache_on;
@@ -28,6 +32,10 @@ sub clear_cache {
   my ($self)=@_;
   $self->{"cache"}={};
 }
+
+#####################################################
+# Variables
+#####################################################
 
 sub set {
   my ($self,$var,$val)=@_;
@@ -63,18 +71,80 @@ sub del {
   my ($self,$var)=@_;
   $self->{"backend"}->del($var);
   if ($self->{"cache_items"}) {
-    delete $self->{"cache"}->{$var};
+    if (exists $self->{"cache"}->{$var}) {
+      delete $self->{"cache"}->{$var};
+    }
   }
+  $self->del_props($var);
 }
 
 sub exists {
-return (defined get(@_));
+  my ($self,$var)=@_;
+  if ($self->{"cache_items"}) {
+    if (exists $self->{"cache"}->{$var}) {
+      return defined $self->{"cache"}->{$var};
+    }
+    else {
+      my $val=$self->{"backend"}->get($var);
+      return defined $val;
+    }
+  }
+  else {
+    my $val=$self->{"backend"}->get($var);
+    return defined $val;
+  }
 }
+
+#####################################################
+# Properties
+#####################################################
+
+sub set_prop {
+  my ($self,$var,$prop,$val)=@_;
+  $self->set("#props_exist#.$var",1);
+  $self->set("#prop#.$var.$prop",$val);
+}
+
+sub get_prop {
+  my ($self,$var,$prop,$default)=@_;
+return $self->get("#prop#.$var.$prop",$default);
+}
+
+sub del_prop {
+  my ($self,$var,$prop)=@_;
+return $self->del("#prop#.$var.$prop");
+}
+
+sub del_props {
+  my ($self,$var)=@_;
+  if ($self->exists("#props_exist#.$var")) {
+    my $prefix="#prop#.$var";
+    my $N=length($prefix);
+    my @vars=grep { (substr($_,0,$N) eq $prefix) } $self->variables();
+    for my $v (@vars) {
+      $self->del($v);
+    }
+    $self->del("#props_exist#.$var");
+  }
+}
+
+sub exists_prop {
+  my ($self,$var,$prop)=@_;
+  return $self->exists("#prop#.$var.$prop");
+}
+
+#####################################################
+# Variables
+#####################################################
 
 sub variables {
   my $self=shift;
   return $self->{"backend"}->variables();
 }
+
+#####################################################
+# info
+#####################################################
 
 sub cached {
   my $self=shift;
@@ -139,11 +209,34 @@ var does not exist in the backend.
 
 =head2 C<del(var) --E<gt> void>
 
-Deletes a variable from the backend.
+Deletes a variable from the backend. All properties for the variable
+are also removed.
 
 =head2 C<exists(var) --E<gt> boolean>
 
-Is true, if C<var> exists. Is false, otherwise.
+Returns true, if C<var> exists. Returns false, otherwise.
+
+=head2 C<set_prop(var,prop,val) --E<gt> void>
+
+Sets property C<prop> for variable C<var> to value C<val>.
+
+=head2 C<set_prop(var,prop,val) --E<gt> void>
+
+Sets property C<prop> for variable C<var> to value C<val>.
+
+=head2 C<get_prop(var,prop [,default]) --E<gt> string>
+
+Returns property C<prop> for variable C<var>, or C<undef> cq. C<default>
+if the property doesn't exist.
+
+=head2 C<del_prop(var,prop) --E<gt> void>
+
+Deletes property C<prop> for variable C<var>.
+
+=head2 C<exists_prop(var,prop) --E<gt> boolean>
+
+Returns true if property C<prop> exists for variable C<var>.
+False, otherwise.
 
 =head2 C<variables() --E<gt> list of stored variables>
 
