@@ -3,7 +3,7 @@ package Config::Frontend;
 use 5.006;
 use strict;
 
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 
 sub new {
   my $class=shift;
@@ -95,6 +95,20 @@ sub exists {
   }
 }
 
+sub move {
+  my ($self,$fromvar,$tovar)=@_;
+  for my $prop ( $self->properties($fromvar) ) {
+    if ($self->exists_prop($fromvar,$prop)) {
+      $self->set_prop($tovar,$prop,$self->get_prop($fromvar,$prop));
+      $self->del_prop($fromvar,$prop);
+    }
+  }
+  if ($self->exists($fromvar)) {
+    $self->set($tovar,$self->get($fromvar));
+    $self->del($fromvar);
+  }
+}
+
 #####################################################
 # Properties
 #####################################################
@@ -115,20 +129,28 @@ sub del_prop {
 return $self->del("#prop#.$var.$prop");
 }
 
+sub exists_prop {
+  my ($self,$var,$prop)=@_;
+  return $self->exists("#prop#.$var.$prop");
+}
+
+sub move_prop {
+  my ($self,$var,$fromprop,$toprop)=@_;
+  if ($self->exists($var,$fromprop)) {
+    $self->set_prop($var,$toprop,$self->get_prop($var,$fromprop));
+    $self->del_prop($var,$fromprop);
+  }
+}
+
 sub del_props {
   my ($self,$var)=@_;
   if ($self->exists("#props_exist#.$var")) {
     my @props=$self->properties($var);
     for my $v (@props) {
-      $self->del("#prop#.$var.$v");
+      $self->del_prop($var,$v);
     }
     $self->del("#props_exist#.$var");
   }
-}
-
-sub exists_prop {
-  my ($self,$var,$prop)=@_;
-  return $self->exists("#prop#.$var.$prop");
 }
 
 #####################################################
@@ -223,6 +245,11 @@ var does not exist in the backend.
 Deletes a variable from the backend. All properties for the variable
 are also removed.
 
+=head2 C<move(fromvar,tovar) --E<gt> void>
+
+Rename a variable  C<fromvar> with all it's properties to C<tovar>.
+Note. If C<tovar> already exists, it will be overwritten.
+
 =head2 C<exists(var) --E<gt> boolean>
 
 Returns true, if C<var> exists. Returns false, otherwise.
@@ -243,6 +270,12 @@ if the property doesn't exist.
 =head2 C<del_prop(var,prop) --E<gt> void>
 
 Deletes property C<prop> for variable C<var>.
+
+=head2 C<move_prop(var,fromprop,toprop) --E<gt> void>
+
+Renames a property withing the bounds of a variable from C<fromprop>
+to C<toprop>. Note. If C<toprop> already exists, it will be
+overwritten.
 
 =head2 C<exists_prop(var,prop) --E<gt> boolean>
 
