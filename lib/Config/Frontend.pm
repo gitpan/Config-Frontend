@@ -3,7 +3,7 @@ package Config::Frontend;
 use 5.006;
 use strict;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 sub new {
   my $class=shift;
@@ -11,30 +11,73 @@ sub new {
   my $self;
 
   $self->{"backend"}=$backend;
+  $self->{"cache_items"}=0;
+  $self->{"cache"}={};
+
   bless $self,$class;
 
 return $self;
 }
 
+sub cache {
+  my ($self,$cache_on)=@_;
+  $self->{"cache_items"}=$cache_on;
+}
+
+sub clear_cache {
+  my ($self)=@_;
+  $self->{"cache"}={};
+}
+
 sub set {
   my ($self,$var,$val)=@_;
+  if ($self->{"cache_items"}) {
+    if (exists $self->{"cache"}->{$var}) {
+      delete $self->{"cache"}->{$var};
+    }
+  }
   $self->{"backend"}->set($var,$val);
 }
 
 sub get {
-  my ($self,$var)=@_;
-return $self->{"backend"}->get($var);
+  my ($self,$var,$preset)=@_;
+  if ($self->{"cache_items"}) {
+    if (exists $self->{"cache"}->{$var}) {
+      return $self->{"cache"}->{$var};
+    }
+    else {
+      my $val=$self->{"backend"}->get($var);
+      if (not defined $val) { $val=$preset; }
+      $self->{"cache"}->{$var}=$val;
+      return $val;
+    }
+  }
+  else {
+    my $val=$self->{"backend"}->get($var);
+    if (not defined $val) { $val=$preset; }
+    return $val;
+  }
 }
 
 sub del {
   my ($self,$var)=@_;
   $self->{"backend"}->del($var);
+  if ($self->{"cache_items"}) {
+    delete $self->{"cache"}->{$var};
+  }
 }
 
 sub variables {
   my $self=shift;
   return $self->{"backend"}->variables();
 }
+
+sub cached {
+  my $self=shift;
+  my $items=scalar (keys %{$self->{"cache"}});
+return $items;
+}
+
 
 1;
 __END__
@@ -83,10 +126,12 @@ Returns a C<Config::Frontend> object.
 
 Sets a variable with value val in the backend.
 
-=head2 C<get(var) --E<gt> string>
+=head2 C<get(var [, default]) --E<gt> string>
 
 Returns the value for var as stored in the backend.
-Returns C<undef>, if var does not exist in the backend.
+Returns C<undef>, if var does not exist in the backend and
+C<default> has not been given. Otherwise, returns C<default>, if
+var does not exist in the backend.
 
 =head2 C<del(var) --E<gt> void>
 
@@ -95,6 +140,19 @@ Deletes a variable from the backend.
 =head2 C<variables() --E<gt> list of stored variables>
 
 Returns a list all variables stored in the backen.
+
+=head2 C<cache(cache_on) --E<gt> void>
+
+If C<cache_on> = true, this will turn on caching for
+the C<get()> method. If caching is on, the get() method
+will only go to the backend if a variable does not exist
+in it's cache. The C<set()> function will delete a
+variable from cache if it is updated. The C<del()> function
+will delete a variable from cache.
+
+=head2 C<clear_cache() --E<gt> void>
+
+Clears the cache.
 
 =head1 SEE ALSO
 
@@ -112,6 +170,6 @@ Hans Oesterholt-Dijkema, E<lt>oesterhol@cpan.orgE<gt>
 Copyright 2004 by Hans Oesterholt-Dijkema
 
 This library is free software; you can redistribute it and/or modify
-it under LGPL. 
+it under Artistic License. 
 
 =cut
