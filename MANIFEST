@@ -8,3 +8,8 @@ README
 t/1.t
 t/2.t
 t/3.t
+t/cache.t
+t/default.t
+t/move.t
+t/move.t
+t/props.t

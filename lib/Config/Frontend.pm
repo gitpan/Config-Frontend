@@ -3,7 +3,7 @@ package Config::Frontend;
 use 5.006;
 use strict;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 sub new {
   my $class=shift;
