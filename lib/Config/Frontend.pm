@@ -3,7 +3,7 @@ package Config::Frontend;
 use 5.006;
 use strict;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 sub new {
   my $class=shift;
@@ -65,6 +65,10 @@ sub del {
   if ($self->{"cache_items"}) {
     delete $self->{"cache"}->{$var};
   }
+}
+
+sub exists {
+return (defined get(@_));
 }
 
 sub variables {
@@ -136,6 +140,10 @@ var does not exist in the backend.
 =head2 C<del(var) --E<gt> void>
 
 Deletes a variable from the backend.
+
+=head2 C<exists(var) --E<gt> boolean>
+
+Is true, if C<var> exists. Is false, otherwise.
 
 =head2 C<variables() --E<gt> list of stored variables>
 
