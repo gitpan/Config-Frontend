@@ -3,7 +3,7 @@ package Config::Frontend;
 use 5.006;
 use strict;
 
-our $VERSION = '0.14';
+our $VERSION = '0.16';
 
 sub new {
   my $class=shift;
@@ -118,11 +118,9 @@ return $self->del("#prop#.$var.$prop");
 sub del_props {
   my ($self,$var)=@_;
   if ($self->exists("#props_exist#.$var")) {
-    my $prefix="#prop#.$var";
-    my $N=length($prefix);
-    my @vars=grep { (substr($_,0,$N) eq $prefix) } $self->variables();
-    for my $v (@vars) {
-      $self->del($v);
+    my @props=$self->properties($var);
+    for my $v (@props) {
+      $self->del("#prop#.$var.$v");
     }
     $self->del("#props_exist#.$var");
   }
@@ -134,12 +132,25 @@ sub exists_prop {
 }
 
 #####################################################
-# Variables
+# Variables/properties
 #####################################################
 
+sub properties {
+  my ($self,$var)=@_;
+  my $prefix="#prop#.$var";
+  my $N=length($prefix);
+  my @props;
+  for my $prop ( grep { (substr($_,0,$N) eq $prefix) } $self->{"backend"}->variables() ) {
+    push @props,substr($prop,$N+1);
+  }
+return @props;
+}
+
 sub variables {
-  my $self=shift;
-  return $self->{"backend"}->variables();
+  my ($self)=@_;
+  my $prefix="#prop#.";
+  my $N=length($prefix);
+  return grep { (substr($_,0,$N) ne $prefix) } $self->{"backend"}->variables();
 }
 
 #####################################################
@@ -240,7 +251,11 @@ False, otherwise.
 
 =head2 C<variables() --E<gt> list of stored variables>
 
-Returns a list all variables stored in the backen.
+Returns a list all variables (not properties) stored in the backend.
+
+=head2 C<properties(var) --E<gt> list of stored properties>
+
+Returns a list of all properties for a variable in the backend.
 
 =head2 C<cache(cache_on) --E<gt> void>
 
